@@ -1,0 +1,1595 @@
+
+<!--
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Steganography Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'EB Garamond', serif; /* Apply EB Garamond, with generic serif as fallback */
+        }
+        /* Custom styles for canvas to ensure background image display */
+        .canvas-display {
+            background-color: #222; /* Darker background for canvas */
+            border: 1px solid #444; /* Lighter border for contrast */
+            border-radius: 0.75rem; /* More rounded corners */
+            max-width: 100%;
+            height: auto;
+            min-height: 180px; /* Slightly larger min-height */
+            min-width: 180px;
+            display: block; /* Ensures it takes its own line */
+            margin-top: 1rem; /* Adjusted margin */
+            background-size: contain; /* Make image fit within canvas */
+            background-repeat: no-repeat;
+            background-position: center;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4); /* Inner shadow for depth */
+        }
+
+        /* Custom file input styling */
+        input[type="file"] {
+            cursor: pointer;
+        }
+        input[type="file"]::-webkit-file-upload-button {
+            @apply mr-4 py-2 px-4 rounded-full border-0 text-sm font-semibold;
+            @apply bg-gray-700 text-purple-300 hover:bg-gray-600;
+            cursor: pointer;
+        }
+        input[type="file"]::file-selector-button {
+            @apply mr-4 py-2 px-4 rounded-full border-0 text-sm font-semibold;
+            @apply bg-gray-700 text-purple-300 hover:bg-gray-600;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-950 text-gray-100 p-4 sm:p-8 flex flex-col items-center">
+
+    <h1 class="text-4xl font-bold text-purple-400 mb-8 text-center tracking-wide">Professional Steganography Tool</h1>
+
+    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10 border border-gray-700">
+        <div class="flex justify-center mb-8 border-b border-gray-700">
+            <button id="tabText" class="px-8 py-4 text-lg font-semibold rounded-t-xl transition-all duration-300 bg-purple-700 text-white shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                Text Steganography
+            </button>
+            <button id="tabImage" class="px-8 py-4 text-lg font-semibold rounded-t-xl transition-all duration-300 text-gray-400 hover:bg-gray-700 hover:text-gray-100 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                Image Steganography
+            </button>
+        </div>
+
+        <div id="loadingIndicator" class="hidden justify-center items-center mb-6">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
+            <span class="ml-4 text-purple-400 text-lg">Processing...</span>
+        </div>
+
+        <div id="messageDisplay" class="hidden p-4 mb-6 rounded-lg text-center font-medium"></div>
+
+        <div id="textSteganography" class="tab-content space-y-8">
+            <h2 class="text-3xl font-semibold text-gray-200 mb-6 text-center">Text Steganography</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label for="textCoverImage" class="block text-base font-medium text-gray-300 mb-3">Select Cover Image:</label>
+                    <input type="file" id="textCoverImage" accept="image/*" class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200">
+                </div>
+
+                <div class="form-group">
+                    <label for="textToEmbed" class="block text-base font-medium text-gray-300 mb-3">Text to Embed:</label>
+                    <textarea id="textToEmbed" rows="5" placeholder="Enter your secret message here..." class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200"></textarea>
+                </div>
+            </div>
+            
+            <div class="flex justify-center gap-6 mt-8">
+                <button onclick="embedText(event)" class="px-8 py-4 bg-purple-700 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Embed Text
+                </button>
+                <button onclick="extractText(event)" class="px-8 py-4 bg-green-700 text-white font-semibold rounded-xl shadow-lg hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Extract Text
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-10">
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Original Image</span>
+                    <canvas id="textCoverImageCanvas" class="canvas-display"></canvas>
+                </div>
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Stego Image Output</span>
+                    <canvas id="stegoImageOutputCanvas" class="canvas-display"></canvas>
+                    <button id="downloadStegoTextImageBtn" onclick="downloadCanvasImage(elements.stegoImageOutputCanvas, 'stego_text_image.png')" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Download Stego Image
+                    </button>
+                </div>
+            </div>
+
+            <div id="extractedTextDisplay" class="hidden mt-8 p-5 bg-blue-900 rounded-xl border border-blue-700 shadow-md">
+                <h3 class="text-xl font-semibold text-blue-300 mb-3">Extracted Text:</h3>
+                <pre id="extractedTextOutput" class="bg-blue-800 p-4 rounded-lg text-blue-200 whitespace-pre-wrap break-words text-base leading-relaxed"></pre>
+            </div>
+        </div>
+
+        <div id="imageSteganography" class="tab-content hidden space-y-8">
+            <h2 class="text-3xl font-semibold text-gray-200 mb-6 text-center">Image Steganography</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label for="imageCoverImage" class="block text-base font-medium text-gray-300 mb-3">Select Cover Image:</label>
+                    <input type="file" id="imageCoverImage" accept="image/*" class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200">
+                </div>
+
+                <div class="form-group">
+                    <label for="secretImage" class="block text-base font-medium text-gray-300 mb-3">Select Secret Image to Embed:</label>
+                    <input type="file" id="secretImage" accept="image/*" class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200">
+                </div>
+            </div>
+
+            <div class="flex justify-center gap-6 mt-8">
+                <button onclick="embedImage(event)" class="px-8 py-4 bg-purple-700 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Embed Image
+                </button>
+                <button onclick="extractImage(event)" class="px-8 py-4 bg-green-700 text-white font-semibold rounded-xl shadow-lg hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Extract Image
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-10">
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Cover Image</span>
+                    <canvas id="imageCoverImageCanvas" class="canvas-display"></canvas>
+                </div>
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Secret Image</span>
+                    <canvas id="secretImageCanvas" class="canvas-display"></canvas>
+                </div>
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Stego Image Output</span>
+                    <canvas id="stegoImageEmbeddingOutputCanvas" class="canvas-display"></canvas>
+                    <button id="downloadStegoImageEmbeddingBtn" onclick="downloadCanvasImage(elements.stegoImageEmbeddingOutputCanvas, 'stego_image_embedded.png')" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Download Stego Image
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-8">
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Extracted Secret Image</span>
+                    <canvas id="extractedSecretImageCanvas" class="canvas-display"></canvas>
+                    <button id="downloadExtractedSecretImageBtn" onclick="downloadCanvasImage(elements.extractedSecretImageCanvas, 'extracted_secret_image.png')" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Download Extracted Secret Image
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set the API_BASE_URL to match your Flask backend's root, as Flask routes are '/api/...'
+        const API_BASE_URL = 'http://localhost:5000/api'; 
+
+        // Centralized DOM Elements
+        const elements = {
+            tabs: {
+                text: document.getElementById('tabText'),
+                image: document.getElementById('tabImage')
+            },
+            tabContents: {
+                textSteganography: document.getElementById('textSteganography'),
+                imageSteganography: document.getElementById('imageSteganography')
+            },
+            loadingIndicator: document.getElementById('loadingIndicator'),
+            messageDisplay: document.getElementById('messageDisplay'),
+
+            // Text Steganography Elements
+            textCoverImageInput: document.getElementById('textCoverImage'),
+            textToEmbedInput: document.getElementById('textToEmbed'),
+            textCoverImageCanvas: document.getElementById('textCoverImageCanvas'),
+            stegoImageOutputCanvas: document.getElementById('stegoImageOutputCanvas'),
+            extractedTextOutput: document.getElementById('extractedTextOutput'),
+            extractedTextDisplay: document.getElementById('extractedTextDisplay'),
+            downloadStegoTextImageBtn: document.getElementById('downloadStegoTextImageBtn'),
+
+            // Image Steganography Elements
+            imageCoverImageInput: document.getElementById('imageCoverImage'),
+            secretImageInput: document.getElementById('secretImage'),
+            imageCoverImageCanvas: document.getElementById('imageCoverImageCanvas'),
+            secretImageCanvas: document.getElementById('secretImageCanvas'),
+            stegoImageEmbeddingOutputCanvas: document.getElementById('stegoImageEmbeddingOutputCanvas'),
+            extractedSecretImageCanvas: document.getElementById('extractedSecretImageCanvas'),
+            downloadStegoImageEmbeddingBtn: document.getElementById('downloadStegoImageEmbeddingBtn'),
+            downloadExtractedSecretImageBtn: document.getElementById('downloadExtractedSecretImageBtn')
+        };
+
+        // --- Helper Functions ---
+
+        /**
+         * Clears all canvases and resets their background images.
+         */
+        function clearCanvases() {
+            const allCanvases = [
+                elements.textCoverImageCanvas, elements.stegoImageOutputCanvas,
+                elements.imageCoverImageCanvas, elements.secretImageCanvas, 
+                elements.stegoImageEmbeddingOutputCanvas, elements.extractedSecretImageCanvas 
+            ];
+            allCanvases.forEach(canvas => {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.style.backgroundImage = 'none';
+                // Reset canvas dimensions to a default for placeholder visibility
+                canvas.width = 180; 
+                canvas.height = 180; 
+            });
+            // Hide all download buttons when canvases are cleared
+            elements.downloadStegoTextImageBtn.classList.add('hidden');
+            elements.downloadStegoImageEmbeddingBtn.classList.add('hidden');
+            elements.downloadExtractedSecretImageBtn.classList.add('hidden');
+        }
+
+        /**
+         * Shows or hides the active tab content and updates tab button styles.
+         * @param {string} activeTabElementId - The ID of the tab content div to show.
+         */
+        function showTab(activeTabElementId) {
+            // Hide all tab contents
+            for (const tabId in elements.tabContents) {
+                elements.tabContents[tabId].classList.add('hidden');
+            }
+            // Reset all tab button styles
+            for (const buttonId in elements.tabs) {
+                elements.tabs[buttonId].classList.remove('bg-purple-700', 'text-white', 'shadow-md');
+                elements.tabs[buttonId].classList.add('text-gray-400', 'hover:bg-gray-700', 'hover:text-gray-100');
+            }
+
+            // Show the active tab content
+            document.getElementById(activeTabElementId).classList.remove('hidden');
+            
+            // Activate the corresponding tab button
+            const buttonToActivate = Object.keys(elements.tabs).find(key => {
+                return (key === 'text' && activeTabElementId === 'textSteganography') ||
+                       (key === 'image' && activeTabElementId === 'imageSteganography');
+            });
+            if (buttonToActivate) {
+                elements.tabs[buttonToActivate].classList.add('bg-purple-700', 'text-white', 'shadow-md');
+                elements.tabs[buttonToActivate].classList.remove('text-gray-400', 'hover:bg-gray-700', 'hover:text-gray-100');
+            }
+            
+            // Clear messages and outputs when switching tabs
+            elements.messageDisplay.classList.add('hidden');
+            elements.extractedTextDisplay.classList.add('hidden');
+            elements.extractedTextOutput.textContent = '';
+            clearCanvases(); // Clear all canvases and hide download buttons
+        }
+
+        /**
+         * Displays a message to the user.
+         * @param {string} message - The message text.
+         * @param {'success'|'error'} type - The type of message (determines styling).
+         */
+        function showMessage(message, type) {
+            console.log(`DEBUG: Attempting to show message: "${message}" of type "${type}"`);
+            elements.messageDisplay.textContent = message;
+            elements.messageDisplay.className = `p-4 mb-6 rounded-lg text-center font-medium ${type === 'error' ? 'bg-red-900 text-red-200 border border-red-700' : 'bg-green-900 text-green-200 border border-green-700'}`;
+            elements.messageDisplay.classList.remove('hidden');
+        }
+
+        /**
+         * Shows or hides the loading indicator.
+         * @param {boolean} show - True to show, false to hide.
+         */
+        function showLoading(show) {
+            if (show) {
+                elements.loadingIndicator.classList.remove('hidden');
+                elements.loadingIndicator.classList.add('flex');
+            } else {
+                elements.loadingIndicator.classList.add('hidden');
+                elements.loadingIndicator.classList.remove('flex');
+            }
+        }
+
+        /**
+         * Loads an image from a File object onto a canvas.
+         * @param {File} file - The image file to load.
+         * @param {HTMLCanvasElement} canvas - The canvas element to draw on.
+         * @returns {Promise<string>} A promise that resolves with the DataURL of the image.
+         */
+        function loadImageToCanvas(file, canvas) {
+            console.log(`Frontend: loadImageToCanvas called for file: ${file.name}, canvas: ${canvas.id}`);
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        console.log(`Frontend: Image loaded for canvas ${canvas.id}. Dimensions: ${img.width}x${img.height}`);
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        canvas.style.backgroundImage = 'none';
+                        resolve(event.target.result);
+                    };
+                    img.onerror = () => {
+                        console.error(`Frontend: Error loading image into Image object for canvas ${canvas.id}.`);
+                        canvas.width = canvas.width || 180;
+                        canvas.height = canvas.height || 180;
+                        canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=Error+Loading')`;
+                        reject(new Error("Failed to load image."));
+                    };
+                    img.src = event.target.result;
+                };
+                reader.onerror = () => {
+                    console.error(`Frontend: Error reading file for canvas ${canvas.id}.`);
+                    canvas.width = canvas.width || 180;
+                    canvas.height = canvas.height || 180;
+                    canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=Error+Reading')`;
+                    reject(new Error("Failed to read file."));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Displays an image from a DataURL onto a canvas.
+         * @param {string} dataUrl - The DataURL of the image.
+         * @param {HTMLCanvasElement} canvas - The canvas element to draw on.
+         */
+        function displayImageOnCanvas(dataUrl, canvas) {
+            console.log(`DEBUG: Attempting to display image on canvas: ${canvas.id}`);
+            console.log(`Frontend: displayImageOnCanvas called for canvas: ${canvas.id}. DataURL length: ${dataUrl ? dataUrl.length : 'null'}`);
+            if (!dataUrl) {
+                console.error(`Frontend: displayImageOnCanvas received null or undefined dataUrl for canvas ${canvas.id}.`);
+                canvas.width = canvas.width || 180;
+                canvas.height = canvas.height || 180;
+                canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=No+Data')`;
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+                console.log(`DEBUG: Image for ${canvas.id} loaded into Image object. Drawing.`);
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                canvas.style.backgroundImage = 'none';
+            };
+            img.onerror = () => {
+                console.error(`Frontend: Error displaying image on canvas ${canvas.id} from data URL. Invalid image data?`);
+                canvas.width = canvas.width || 180;
+                canvas.height = canvas.height || 180;
+                canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=Error+Displaying')`;
+            };
+            img.src = dataUrl;
+        }
+
+        /**
+         * Resizes an image file to a maximum dimension while maintaining aspect ratio,
+         * and returns it as a DataURL.
+         * @param {File} imageFile - The original image file.
+         * @param {number} maxWidth - Maximum width for the resized image.
+         * @param {number} maxHeight - Maximum height for the resized image.
+         * @param {number} quality - JPEG compression quality (0 to 1). Ignored for PNG.
+         * @returns {Promise<string>} A promise that resolves with the DataURL of the resized image.
+         */
+        async function resizeImage(imageFile, maxWidth, maxHeight, quality = 0.9) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Calculate new dimensions while maintaining aspect ratio
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width *= maxHeight / height;
+                                height = maxHeight;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Determine output format based on original file type
+                        const outputFormat = imageFile.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                        
+                        // Convert canvas to DataURL with specified quality
+                        resolve(canvas.toDataURL(outputFormat, quality));
+                    };
+                    img.onerror = reject;
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(imageFile);
+            });
+        }
+
+        /**
+         * Generic function to handle API requests.
+         * @param {string} endpoint - The API endpoint (e.g., '/api/text/embed').
+         * @param {FormData | object} payload - The data to send (FormData for multipart, object for JSON).
+         * @param {string} successMessage - Message to show on success.
+         * @param {string} errorMessage - Message to show on generic error.
+         * @param {function(Object): void} successCallback - Callback to handle successful data.
+         * @param {function(Error): void} [errorCallback] - Optional callback for specific error handling.
+         */
+        async function handleApiRequest(endpoint, payload, successMessage, errorMessage, successCallback, errorCallback) {
+            showMessage('', ''); // Clear previous messages
+            showLoading(true);
+
+            let fetchOptions = {
+                method: 'POST',
+            };
+
+            if (payload instanceof FormData) {
+                fetchOptions.body = payload;
+            } else { // Assume JSON payload
+                fetchOptions.headers = { 'Content-Type': 'application/json' };
+                fetchOptions.body = JSON.stringify(payload);
+            }
+
+            try {
+                console.log(`Frontend: Sending ${endpoint} request to backend...`);
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
+
+                let data;
+                let responseText = '';
+                try {
+                    responseText = await response.text();
+                    data = JSON.parse(responseText);
+                    console.log('Frontend: Received JSON response:', data);
+                } catch (jsonError) {
+                    console.error(`Frontend: Error parsing JSON response from ${endpoint}:`, jsonError);
+                    console.error('Frontend: Raw response text:', responseText);
+                    showMessage('Error: Could not parse response from server. Check console for details.', 'error');
+                    if (errorCallback) errorCallback(jsonError);
+                    return;
+                }
+
+                if (response.ok) {
+                    successCallback(data);
+                    showMessage(data.message || successMessage, 'success');
+                } else {
+                    console.error(`Frontend: Backend returned an error status for ${endpoint}:`, response.status, data.error);
+                    showMessage(`Error: ${data.error || errorMessage}. Check console for details.`, 'error');
+                    if (errorCallback) errorCallback(new Error(data.error || errorMessage));
+                }
+            } catch (error) {
+                console.error(`Frontend: Network or unexpected error during ${endpoint}:`, error);
+                console.error('Frontend: Full error object:', error);
+                showMessage(`Network error: ${error.message}. Check browser console and backend server.`, 'error');
+                if (errorCallback) errorCallback(error);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        /**
+         * Downloads the image content from a given canvas.
+         * @param {HTMLCanvasElement} canvas - The canvas element to download.
+         * @param {string} filename - The desired filename for the downloaded image (e.g., 'my_image.png').
+         */
+        function downloadCanvasImage(canvas, filename) {
+            if (!canvas || !canvas.getContext('2d') || canvas.width === 0 || canvas.height === 0) {
+                showMessage('No image available on canvas to download.', 'error');
+                return;
+            }
+
+            // Get the image data from the canvas as a data URL (PNG format is recommended for steganography)
+            const imageDataURL = canvas.toDataURL('image/png');
+
+            // Create a temporary anchor element
+            const a = document.createElement('a');
+            a.href = imageDataURL;
+            a.download = filename; // Set the desired filename
+
+            // Programmatically click the anchor element to trigger the download
+            document.body.appendChild(a); // Append to body to make it clickable in all browsers
+            a.click();
+            document.body.removeChild(a); // Clean up the temporary element
+        }
+
+        // --- Text Steganography Functions ---
+
+        async function embedText(event) {
+            if (event) event.preventDefault();
+
+            const imageFile = elements.textCoverImageInput.files[0];
+            const textToEmbed = elements.textToEmbedInput.value;
+
+            if (!imageFile || !textToEmbed) {
+                showMessage('Please select an image and enter text to embed.', 'error');
+                elements.downloadStegoTextImageBtn.classList.add('hidden'); // Hide button on error
+                return;
+            }
+
+            // Resize the cover image before sending (more aggressive resizing)
+            const resizedCoverImageBase64 = await resizeImage(imageFile, 800, 800, 0.8); // Max 800px, 80% quality
+            console.log(`Debug: Resized Cover Image Base64 Length (Text Embed): ${resizedCoverImageBase64.length} bytes`);
+            
+            // For text embedding, backend expects JSON
+            const payload = {
+                coverImage: resizedCoverImageBase64,
+                textToEmbed: textToEmbed
+            };
+
+            await handleApiRequest(
+                '/text/embed',
+                payload, // Send as JSON
+                'Text embedded successfully!',
+                'Unknown error during text embedding.',
+                (data) => {
+                    if (data.stegoImage && typeof data.stegoImage === 'string' && data.stegoImage.startsWith('data:image')) {
+                        console.log('Frontend: Valid stegoImage data received. Attempting to display.');
+                        displayImageOnCanvas(data.stegoImage, elements.stegoImageOutputCanvas);
+                        elements.downloadStegoTextImageBtn.classList.remove('hidden'); // Show button on success
+                    } else {
+                        console.warn('Frontend: Backend reported success (200 OK), but stegoImage data is missing or malformed.');
+                        console.warn('Received stegoImage:', data.stegoImage);
+                        showMessage('Embedding successful, but output image data is missing or invalid.', 'error');
+                        elements.stegoImageOutputCanvas.style.backgroundImage = `url('https://placehold.co/${elements.stegoImageOutputCanvas.width || 180}x${elements.stegoImageOutputCanvas.height || 180}/222/888?text=No+Image+Data')`;
+                        elements.downloadStegoTextImageBtn.classList.add('hidden'); // Hide button on malformed data
+                    }
+                },
+                (error) => {
+                    elements.stegoImageOutputCanvas.style.backgroundImage = `url('https://placehold.co/${elements.stegoImageOutputCanvas.width || 180}x${elements.stegoImageOutputCanvas.height || 180}/222/888?text=Error')`;
+                    elements.downloadStegoTextImageBtn.classList.add('hidden'); // Hide button on error
+                }
+            );
+        }
+
+        async function extractText(event) {
+            if (event) event.preventDefault();
+
+            const imageFile = elements.textCoverImageInput.files[0];
+
+            if (!imageFile) {
+                showMessage('Please select an image to extract text from.', 'error');
+                return;
+            }
+
+            elements.extractedTextOutput.textContent = '';
+            elements.extractedTextDisplay.classList.add('hidden');
+
+            // Resize the stego image before sending for extraction (more aggressive resizing)
+            const resizedStegoImageBase64 = await resizeImage(imageFile, 800, 800, 0.8);
+            console.log(`Debug: Resized Stego Image Base64 Length (Text Extract): ${resizedStegoImageBase64.length} bytes`);
+            
+            // For text extraction, backend expects JSON
+            const payload = {
+                stegoImage: resizedStegoImageBase64
+            };
+
+            // Use handleApiRequest for consistency
+            await handleApiRequest(
+                '/text/extract',
+                payload, // Send as JSON
+                'Text extracted successfully!',
+                'Unknown error during text extraction.',
+                (data) => {
+                    elements.extractedTextOutput.textContent = data.extractedText || 'No text found.';
+                    elements.extractedTextDisplay.classList.remove('hidden');
+                },
+                (error) => {
+                    elements.extractedTextOutput.textContent = '';
+                    elements.extractedTextDisplay.classList.add('hidden');
+                }
+            );
+        }
+
+        // --- Image Steganography Functions ---
+
+        async function embedImage(event) {
+            if (event) event.preventDefault();
+
+            const coverImageFile = elements.imageCoverImageInput.files[0];
+            const secretImageFile = elements.secretImageInput.files[0];
+
+            if (!coverImageFile || !secretImageFile) {
+                showMessage('Please select both a cover image and a secret image.', 'error');
+                elements.downloadStegoImageEmbeddingBtn.classList.add('hidden'); // Hide button on error
+                return;
+            }
+
+            // Resize both cover and secret images before sending (more aggressive resizing)
+            const resizedCoverImageBase64 = await resizeImage(coverImageFile, 800, 800, 0.8); // Max 800px, 80% quality
+            console.log(`Debug: Resized Cover Image Base64 Length (Image Embed): ${resizedCoverImageBase64.length} bytes`);
+
+            // Drastically reduce secret image size to ensure it fits
+            const resizedSecretImageBase64 = await resizeImage(secretImageFile, 128, 128, 0.9); // Max 128px, 90% quality for secret
+            console.log(`Debug: Resized Secret Image Base64 Length (Image Embed): ${resizedSecretImageBase64.length} bytes`);
+
+            // Send both images as base64 strings in a JSON payload
+            const payload = {
+                coverImage: resizedCoverImageBase64,
+                secretImage: resizedSecretImageBase64
+            };
+
+            await handleApiRequest(
+                '/image/embed',
+                payload, // Send as JSON
+                'Image embedded successfully!',
+                'Unknown error during image embedding.',
+                (data) => {
+                    if (data.stegoImage && typeof data.stegoImage === 'string' && data.stegoImage.startsWith('data:image')) {
+                        console.log('Frontend: Valid stegoImage data received. Attempting to display.');
+                        displayImageOnCanvas(data.stegoImage, elements.stegoImageEmbeddingOutputCanvas);
+                        elements.downloadStegoImageEmbeddingBtn.classList.remove('hidden'); // Show button on success
+                    } else {
+                        console.warn('Frontend: Backend reported success (200 OK), but stegoImage data is missing or malformed.');
+                        console.warn('Received stegoImage:', data.stegoImage);
+                        showMessage('Embedding successful, but output image data is missing or invalid.', 'error');
+                        elements.stegoImageEmbeddingOutputCanvas.style.backgroundImage = `url('https://placehold.co/${elements.stegoImageEmbeddingOutputCanvas.width || 180}x${elements.stegoImageEmbeddingOutputCanvas.height || 180}/222/888?text=No+Image+Data')`;
+                        elements.downloadStegoImageEmbeddingBtn.classList.add('hidden'); // Hide button on malformed data
+                    }
+                },
+                (error) => {
+                    elements.stegoImageEmbeddingOutputCanvas.style.backgroundImage = `url('https://placehold.co/${elements.stegoImageEmbeddingOutputCanvas.width || 180}x${elements.stegoImageEmbeddingOutputCanvas.height || 180}/222/888?text=Error')`;
+                    elements.downloadStegoImageEmbeddingBtn.classList.add('hidden'); // Hide button on error
+                }
+            );
+        }
+
+        async function extractImage(event) {
+            if (event) event.preventDefault();
+
+            const stegoImageFile = elements.imageCoverImageInput.files[0]; // Using cover image input for stego image
+
+            if (!stegoImageFile) {
+                showMessage('Please select the stego image to extract from.', 'error');
+                elements.downloadExtractedSecretImageBtn.classList.add('hidden'); // Hide button on error
+                return;
+            }
+
+            elements.extractedSecretImageCanvas.style.backgroundImage = 'none'; // Clear any placeholder
+
+            // Resize the stego image before sending for extraction (more aggressive resizing)
+            const resizedStegoImageBase64 = await resizeImage(stegoImageFile, 800, 800, 0.8);
+            console.log(`Debug: Resized Stego Image Base64 Length (Image Extract): ${resizedStegoImageBase64.length} bytes`);
+
+            // For image extraction, backend expects JSON
+            const payload = {
+                stegoImage: resizedStegoImageBase64
+            };
+
+            // Use handleApiRequest for consistency
+            await handleApiRequest(
+                '/image/extract',
+                payload, // Send as JSON
+                'Image extracted successfully!',
+                'Unknown error during image extraction.',
+                (data) => {
+                    if (data.extractedImage && typeof data.extractedImage === 'string' && data.extractedImage.startsWith('data:image')) {
+                        console.log('Frontend: Valid extractedImage data received. Attempting to display.');
+                        displayImageOnCanvas(data.extractedImage, elements.extractedSecretImageCanvas);
+                        elements.downloadExtractedSecretImageBtn.classList.remove('hidden'); // Show button on success
+                        showMessage(data.message || 'Image extracted successfully!', 'success');
+                    } else {
+                        console.warn('Frontend: Backend reported success (200 OK), but extractedImage data is missing or malformed.');
+                        console.warn('Received extractedImage:', data.extractedImage);
+                        showMessage('Extraction successful, but output image data is missing or invalid.', 'error');
+                        elements.extractedSecretImageCanvas.style.backgroundImage = `url('https://placehold.co/${elements.extractedSecretImageCanvas.width || 180}x${elements.extractedSecretImageCanvas.height || 180}/222/888?text=No+Image+Data')`;
+                        elements.downloadExtractedSecretImageBtn.classList.add('hidden'); // Hide button on malformed data
+                    }
+                },
+                (error) => {
+                    elements.extractedSecretImageCanvas.style.backgroundImage = `url('https://placehold.co/${elements.extractedSecretImageCanvas.width || 180}x${elements.extractedSecretImageCanvas.height || 180}/222/888?text=Error')`;
+                    elements.downloadExtractedSecretImageBtn.classList.add('hidden'); // Hide button on error
+                }
+            );
+        }
+
+        // Initialize the first tab on page load and set up event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            showTab('textSteganography');
+
+            // Event listeners for file input changes to load images onto canvases
+            elements.textCoverImageInput.addEventListener('change', (event) => {
+                if (event.target.files.length > 0) {
+                    loadImageToCanvas(event.target.files[0], elements.textCoverImageCanvas);
+                } else {
+                    clearCanvases(); // Clear all canvases if no file is selected
+                }
+            });
+
+            elements.imageCoverImageInput.addEventListener('change', (event) => {
+                if (event.target.files.length > 0) {
+                    loadImageToCanvas(event.target.files[0], elements.imageCoverImageCanvas);
+                } else {
+                    clearCanvases();
+                }
+            });
+
+            elements.secretImageInput.addEventListener('change', (event) => {
+                if (event.target.files.length > 0) {
+                    loadImageToCanvas(event.target.files[0], elements.secretImageCanvas);
+                } else {
+                    clearCanvases();
+                }
+            });
+
+            // Event listeners for tab buttons (instead of inline onclick)
+            elements.tabs.text.addEventListener('click', () => showTab('textSteganography'));
+            elements.tabs.image.addEventListener('click', () => showTab('imageSteganography'));
+        });
+    </script>
+</body>
+</html>
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Steganography Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Lora:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+               font-family: 'Lora', serif; /* Lora for body text */
+         }
+        h1, h2 {
+            font-family: 'Merriweather', serif; /* Merriweather for headings */
+        }
+        /* Custom styles for canvas to ensure background image display */
+        .canvas-display {
+            background-color: #222; /* Darker background for canvas */
+            border: 1px solid #444; /* Lighter border for contrast */
+            border-radius: 0.75rem; /* More rounded corners */
+            max-width: 100%;
+            height: auto;
+            min-height: 180px; /* Slightly larger min-height */
+            min-width: 180px;
+            display: block; /* Ensures it takes its own line */
+            margin-top: 1rem; /* Adjusted margin */
+            background-size: contain; /* Make image fit within canvas */
+            background-repeat: no-repeat;
+            background-position: center;
+            box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.4); /* Inner shadow for depth */
+        }
+
+        /* Custom file input styling */
+        input[type="file"] {
+            cursor: pointer;
+        }
+        input[type="file"]::-webkit-file-upload-button,
+        input[type="file"]::file-selector-button {
+            @apply mr-4 py-3 px-6 rounded-full border-0 text-base font-semibold; /* Adjusted padding and font size */
+            background-image: linear-gradient(to right, #6b46c1, #805ad5); /* Purple gradient */
+            color: #e9d8fd; /* Lighter purple text */
+            box-shadow: 0 4px 15px rgba(128, 90, 213, 0.4); /* More prominent shadow */
+            transition: all 0.3s ease; /* Smooth transitions */
+            border: 1px solid #9f7aea; /* Subtle border */
+            cursor: pointer;
+        }
+        input[type="file"]::-webkit-file-upload-button:hover,
+        input[type="file"]::file-selector-button:hover {
+            background-image: linear-gradient(to right, #805ad5, #9f7aea); /* Lighter gradient on hover */
+            box-shadow: 0 6px 20px rgba(128, 90, 213, 0.6); /* Larger shadow on hover */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-950 text-gray-100 p-4 sm:p-8 flex flex-col items-center">
+
+    <h1 class="text-4xl font-bold text-purple-400 mb-8 text-center tracking-wide">Professional Steganography Tool</h1>
+
+    <div class="w-full max-w-4xl bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10 border border-gray-700">
+        <div class="flex justify-center mb-8 border-b border-gray-700">
+            <button id="tabText" class="px-8 py-4 text-lg font-semibold rounded-t-xl transition-all duration-300 bg-purple-700 text-white shadow-lg transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                Text Steganography
+            </button>
+            <button id="tabImage" class="px-8 py-4 text-lg font-semibold rounded-t-xl transition-all duration-300 text-gray-400 hover:bg-gray-700 hover:text-gray-100 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800">
+                Image Steganography
+            </button>
+        </div>
+
+        <div id="loadingIndicator" class="hidden justify-center items-center mb-6">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-500"></div>
+            <span class="ml-4 text-purple-400 text-lg">Processing...</span>
+        </div>
+
+        <div id="messageDisplay" class="hidden p-4 mb-6 rounded-lg text-center font-medium"></div>
+
+        <div id="textSteganography" class="tab-content space-y-8">
+            <h2 class="text-3xl font-semibold text-gray-200 mb-6 text-center">Text Steganography</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label for="textCoverImage" class="block text-base font-medium text-gray-300 mb-3">Select Cover Image:</label>
+                    <input type="file" id="textCoverImage" accept="image/*" class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200">
+                </div>
+
+                <div class="form-group">
+                    <label for="textToEmbed" class="block text-base font-medium text-gray-300 mb-3">Text to Embed:</label>
+                    <textarea id="textToEmbed" rows="5" placeholder="Enter your secret message here..." class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200"></textarea>
+                </div>
+            </div>
+            
+            <div class="flex justify-center gap-6 mt-8">
+                <button onclick="embedText(event)" class="px-8 py-4 bg-purple-700 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Embed Text
+                </button>
+                <button onclick="extractText(event)" class="px-8 py-4 bg-green-700 text-white font-semibold rounded-xl shadow-lg hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Extract Text
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-10">
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Original Image</span>
+                    <canvas id="textCoverImageCanvas" class="canvas-display"></canvas>
+                </div>
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Stego Image Output</span>
+                    <canvas id="stegoImageOutputCanvas" class="canvas-display"></canvas>
+                    <button id="downloadStegoTextImageBtn" onclick="downloadCanvasImage(elements.stegoImageOutputCanvas, 'stego_text_image.png')" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Download Stego Image
+                    </button>
+                </div>
+            </div>
+
+            <div id="extractedTextDisplay" class="hidden mt-8 p-5 bg-blue-900 rounded-xl border border-blue-700 shadow-md">
+                <h3 class="text-xl font-semibold text-blue-300 mb-3">Extracted Text:</h3>
+                <pre id="extractedTextOutput" class="bg-blue-800 p-4 rounded-lg text-blue-200 whitespace-pre-wrap break-words text-base leading-relaxed"></pre>
+                <button id="scanExtractedTextBtn" onclick="scanExtractedData('text')"
+                    class="mt-4 px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                    Scan Extracted Text for Malware
+                </button>
+                <div id="textMalwareScanResult" class="mt-4 text-center hidden"></div>
+            </div>
+        </div>
+
+        <div id="imageSteganography" class="tab-content hidden space-y-8">
+            <h2 class="text-3xl font-semibold text-gray-200 mb-6 text-center">Image Steganography</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label for="imageCoverImage" class="block text-base font-medium text-gray-300 mb-3">Select Cover Image:</label>
+                    <input type="file" id="imageCoverImage" accept="image/*" class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200">
+                </div>
+
+                <div class="form-group">
+                    <label for="secretImage" class="block text-base font-medium text-gray-300 mb-3">Select Secret Image to Embed:</label>
+                    <input type="file" id="secretImage" accept="image/*" class="w-full p-3 rounded-lg border border-gray-600 bg-gray-700 text-gray-100 placeholder-gray-400 focus:border-purple-500 focus:ring-purple-500 transition-colors duration-200">
+                </div>
+            </div>
+
+            <div class="flex justify-center gap-6 mt-8">
+                <button onclick="embedImage(event)" class="px-8 py-4 bg-purple-700 text-white font-semibold rounded-xl shadow-lg hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Embed Image
+                </button>
+                <button onclick="extractImage(event)" class="px-8 py-4 bg-green-700 text-white font-semibold rounded-xl shadow-lg hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105">
+                    Extract Image
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-10">
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Cover Image</span>
+                    <canvas id="imageCoverImageCanvas" class="canvas-display"></canvas>
+                </div>
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Secret Image</span>
+                    <canvas id="secretImageCanvas" class="canvas-display"></canvas>
+                </div>
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Stego Image Output</span>
+                    <canvas id="stegoImageEmbeddingOutputCanvas" class="canvas-display"></canvas>
+                    <button id="downloadStegoImageEmbeddingBtn" onclick="downloadCanvasImage(elements.stegoImageEmbeddingOutputCanvas, 'stego_image_embedded.png')" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Download Stego Image
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-8">
+                <div class="flex flex-col items-center p-4 bg-gray-700 rounded-xl shadow-inner border border-gray-600">
+                    <span class="text-base font-semibold text-gray-300 mb-3">Extracted Secret Image</span>
+                    <canvas id="extractedSecretImageCanvas" class="canvas-display"></canvas>
+                    <button id="downloadExtractedSecretImageBtn" onclick="downloadCanvasImage(elements.extractedSecretImageCanvas, 'extracted_secret_image.png')" 
+                            class="mt-4 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Download Extracted Secret Image
+                    </button>
+                    <button id="scanExtractedImageBtn" onclick="scanExtractedData('image')"
+                            class="mt-4 px-6 py-3 bg-red-600 text-white font-semibold rounded-xl shadow-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-all duration-300 transform hover:scale-105 hidden">
+                        Scan Extracted Image for Malware
+                    </button>
+                    <div id="imageMalwareScanResult" class="mt-4 text-center hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set the API_BASE_URL to match your Flask backend's root, as Flask routes are '/api/...'
+        const API_BASE_URL = window.location.origin + '/api'; 
+
+        // Define maximum dimensions for images to prevent "Request Entity Too Large" errors
+        const MAX_IMAGE_DIMENSION = 1200; // Max width or height for cover images
+        const MAX_SECRET_IMAGE_DIMENSION = 100; // Max width or height for secret images
+
+        // Centralized DOM Elements
+        const elements = {
+            tabs: {
+                text: document.getElementById('tabText'),
+                image: document.getElementById('tabImage')
+            },
+            tabContents: {
+                textSteganography: document.getElementById('textSteganography'),
+                imageSteganography: document.getElementById('imageSteganography')
+            },
+            loadingIndicator: document.getElementById('loadingIndicator'),
+            messageDisplay: document.getElementById('messageDisplay'),
+
+            // Text Steganography Elements
+            textCoverImageInput: document.getElementById('textCoverImage'),
+            textToEmbedInput: document.getElementById('textToEmbed'),
+            textCoverImageCanvas: document.getElementById('textCoverImageCanvas'),
+            stegoImageOutputCanvas: document.getElementById('stegoImageOutputCanvas'),
+            extractedTextOutput: document.getElementById('extractedTextOutput'),
+            extractedTextDisplay: document.getElementById('extractedTextDisplay'),
+            downloadStegoTextImageBtn: document.getElementById('downloadStegoTextImageBtn'),
+            scanExtractedTextBtn: document.getElementById('scanExtractedTextBtn'), 
+            textMalwareScanResult: document.getElementById('textMalwareScanResult'), 
+
+            // Image Steganography Elements
+            imageCoverImageInput: document.getElementById('imageCoverImage'),
+            secretImageInput: document.getElementById('secretImage'),
+            imageCoverImageCanvas: document.getElementById('imageCoverImageCanvas'),
+            secretImageCanvas: document.getElementById('secretImageCanvas'),
+            stegoImageEmbeddingOutputCanvas: document.getElementById('stegoImageEmbeddingOutputCanvas'),
+            extractedSecretImageCanvas: document.getElementById('extractedSecretImageCanvas'),
+            downloadStegoImageEmbeddingBtn: document.getElementById('downloadStegoImageEmbeddingBtn'),
+            downloadExtractedSecretImageBtn: document.getElementById('downloadExtractedSecretImageBtn'),
+            scanExtractedImageBtn: document.getElementById('scanExtractedImageBtn'), 
+            imageMalwareScanResult: document.getElementById('imageMalwareScanResult') 
+        };
+
+        // --- Helper Functions ---
+
+        /**
+         * Clears all canvases and resets their background images.
+         */
+        function clearCanvases() {
+            const allCanvases = [
+                elements.textCoverImageCanvas, elements.stegoImageOutputCanvas,
+                elements.imageCoverImageCanvas, elements.secretImageCanvas, 
+                elements.stegoImageEmbeddingOutputCanvas, elements.extractedSecretImageCanvas 
+            ];
+            allCanvases.forEach(canvas => {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.style.backgroundImage = 'none';
+                // Reset canvas dimensions to a default for placeholder visibility
+                canvas.width = 180; 
+                canvas.height = 180; 
+            });
+            // Hide all download buttons when canvases are cleared
+            elements.downloadStegoTextImageBtn.classList.add('hidden');
+            elements.downloadStegoImageEmbeddingBtn.classList.add('hidden');
+            elements.downloadExtractedSecretImageBtn.classList.add('hidden');
+            // Hide all scan buttons and results when canvases are cleared
+            elements.scanExtractedTextBtn.classList.add('hidden');
+            elements.textMalwareScanResult.classList.add('hidden');
+            elements.scanExtractedImageBtn.classList.add('hidden');
+            elements.imageMalwareScanResult.classList.add('hidden');
+        }
+
+        /**
+         * Shows or hides the active tab content and updates tab button styles.
+         * @param {string} activeTabElementId - The ID of the tab content div to show.
+         */
+        function showTab(activeTabElementId) {
+            // Hide all tab contents
+            for (const tabId in elements.tabContents) {
+                elements.tabContents[tabId].classList.add('hidden');
+            }
+            // Reset all tab button styles
+            for (const buttonId in elements.tabs) {
+                elements.tabs[buttonId].classList.remove('bg-purple-700', 'text-white', 'shadow-md');
+                elements.tabs[buttonId].classList.add('text-gray-400', 'hover:bg-gray-700', 'hover:text-gray-100');
+            }
+
+            // Show the active tab content
+            document.getElementById(activeTabElementId).classList.remove('hidden');
+            
+            // Activate the corresponding tab button
+            const buttonToActivate = Object.keys(elements.tabs).find(key => {
+                return (key === 'text' && activeTabElementId === 'textSteganography') ||
+                       (key === 'image' && activeTabElementId === 'imageSteganography');
+            });
+            if (buttonToActivate) {
+                elements.tabs[buttonToActivate].classList.add('bg-purple-700', 'text-white', 'shadow-md');
+                elements.tabs[buttonToActivate].classList.remove('text-gray-400', 'hover:bg-gray-700', 'hover:text-gray-100');
+            }
+            
+            // Clear messages and outputs when switching tabs
+            elements.messageDisplay.classList.add('hidden'); // Ensure message display is hidden
+            elements.extractedTextDisplay.classList.add('hidden');
+            elements.extractedTextOutput.textContent = '';
+            clearCanvases(); // Clear all canvases and hide download buttons
+        }
+
+        /**
+         * Displays a message to the user.
+         * @param {string} message - The message text.
+         * @param {'success'|'error'} type - The type of message (determines styling).
+         */
+        function showMessage(message, type) {
+            console.log(`DEBUG: Attempting to show message: "${message}" of type "${type}"`);
+            elements.messageDisplay.textContent = message;
+            elements.messageDisplay.className = `p-4 mb-6 rounded-lg text-center font-medium ${type === 'error' ? 'bg-red-900 text-red-200 border border-red-700' : 'bg-green-900 text-green-200 border border-green-700'}`;
+            elements.messageDisplay.classList.remove('hidden');
+        }
+
+        /**
+         * Shows or hides the loading indicator.
+         * @param {boolean} show - True to show, false to hide.
+         */
+        function showLoading(show) {
+            if (show) {
+                elements.loadingIndicator.classList.remove('hidden');
+                elements.loadingIndicator.classList.add('flex');
+            } else {
+                elements.loadingIndicator.classList.add('hidden');
+                elements.loadingIndicator.classList.remove('flex');
+            }
+        }
+
+        /**
+         * Loads an image from a File object onto a canvas.
+         * @param {File} file - The image file to load.
+         * @param {HTMLCanvasElement} canvas - The canvas element to draw on.
+         * @returns {Promise<string>} A promise that resolves with the DataURL of the image.
+         */
+        function loadImageToCanvas(file, canvas) {
+            console.log(`Frontend: loadImageToCanvas called for file: ${file.name}, canvas: ${canvas.id}`);
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        console.log(`Frontend: Image loaded for canvas ${canvas.id}. Dimensions: ${img.width}x${img.height}`);
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0);
+                        canvas.style.backgroundImage = 'none';
+                        resolve(event.target.result);
+                    };
+                    img.onerror = () => {
+                        console.error(`Frontend: Error loading image into Image object for canvas ${canvas.id}.`);
+                        canvas.width = canvas.width || 180;
+                        canvas.height = canvas.height || 180;
+                        canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=Error+Loading')`;
+                        reject(new Error("Failed to load image."));
+                    };
+                    img.src = event.target.result;
+                };
+                reader.onerror = () => {
+                    console.error(`Frontend: Error reading file for canvas ${canvas.id}.`);
+                    canvas.width = canvas.width || 180;
+                    canvas.height = canvas.height || 180;
+                    canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=Error+Reading')`;
+                    reject(new Error("Failed to read file."));
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Displays an image from a DataURL onto a canvas.
+         * @param {string} dataUrl - The DataURL of the image.
+         * @param {HTMLCanvasElement} canvas - The canvas element to draw on.
+         */
+        function displayImageOnCanvas(dataUrl, canvas) {
+            console.log(`DEBUG: Attempting to display image on canvas: ${canvas.id}`);
+            console.log(`Frontend: displayImageOnCanvas called for canvas: ${canvas.id}. DataURL length: ${dataUrl ? dataUrl.length : 'null'}`);
+            if (!dataUrl) {
+                console.error(`Frontend: displayImageOnCanvas received null or undefined dataUrl for canvas ${canvas.id}.`);
+                canvas.width = canvas.width || 180;
+                canvas.height = canvas.height || 180;
+                canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=No+Data')`;
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+                console.log(`DEBUG: Image for ${canvas.id} loaded into Image object. Drawing.`);
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                canvas.style.backgroundImage = 'none';
+            };
+            img.onerror = () => {
+                console.error(`Frontend: Error displaying image on canvas ${canvas.id} from data URL. Invalid image data?`);
+                canvas.width = canvas.width || 180;
+                canvas.height = canvas.height || 180;
+                canvas.style.backgroundImage = `url('https://placehold.co/${canvas.width}x${canvas.height}/222/888?text=Error+Displaying')`;
+            };
+            img.src = dataUrl;
+        }
+
+        /**
+         * Resizes an image file to a maximum dimension while maintaining aspect ratio,
+         * and returns it as a DataURL.
+         * @param {File} imageFile - The original image file.
+         * @param {number} maxWidth - Maximum width for the resized image.
+         * @param {number} maxHeight - Maximum height for the resized image.
+         * @param {string} outputMimeType - The desired output MIME type (e.g., 'image/png', 'image/jpeg').
+         * @param {number} quality - JPEG compression quality (0 to 1). Ignored for PNG.
+         * @returns {Promise<string>} A promise that resolves with the DataURL of the resized image.
+         */
+        async function resizeImage(imageFile, maxWidth, maxHeight, outputMimeType = 'image/png', quality = 1.0) { // Default quality to 1.0 for PNG
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Calculate new dimensions while maintaining aspect ratio
+                        if (width > height) {
+                            if (width > maxWidth) {
+                                height *= maxWidth / width;
+                                width = maxWidth;
+                            }
+                        } else {
+                            if (height > maxHeight) {
+                                width *= maxHeight / height;
+                                height = maxHeight;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert canvas to DataURL with specified MIME type and quality
+                        resolve(canvas.toDataURL(outputMimeType, quality));
+                    };
+                    img.onerror = reject;
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(imageFile); // Corrected: changed 'file' to 'imageFile'
+            });
+        }
+
+        /**
+         * Generic function to handle API requests.
+         * @param {string} endpoint - The API endpoint (e.g., '/api/text/embed').
+         * @param {FormData | object} payload - The data to send (FormData for multipart, object for JSON).
+         * @param {string} successMessage - Message to show on success.
+         * @param {string} errorMessage - Message to show on generic error.
+         * @param {function(Object): void} successCallback - Callback to handle successful data.
+         * @param {function(Error): void} [errorCallback] - Optional callback for specific error handling.
+         */
+        async function handleApiRequest(endpoint, payload, successMessage, errorMessage, successCallback, errorCallback) {
+            showMessage('', ''); // Clear previous messages at the start of an API request
+            showLoading(true);
+
+            let fetchOptions = {
+                method: 'POST',
+            };
+
+            if (payload instanceof FormData) {
+                fetchOptions.body = payload;
+            } else { // Assume JSON payload
+                fetchOptions.headers = { 'Content-Type': 'application/json' };
+                fetchOptions.body = JSON.stringify(payload);
+            }
+
+            try {
+                console.log(`Frontend: Sending ${endpoint} request to backend...`);
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
+
+                let data;
+                let responseText = '';
+                try {
+                    responseText = await response.text();
+                    data = JSON.parse(responseText);
+                    console.log('Frontend: Received JSON response:', data);
+                } catch (jsonError) {
+                    console.error(`Frontend: Error parsing JSON response from ${endpoint}:`, jsonError);
+                    console.error('Frontend: Raw response text:', responseText);
+                    showMessage('Error: Could not parse response from server. Check console for details.', 'error');
+                    if (errorCallback) errorCallback(jsonError);
+                    return;
+                }
+
+                if (response.ok) {
+                    successCallback(data);
+                    showMessage(data.message || successMessage, 'success');
+                } else {
+                    console.error(`Frontend: Backend returned an error status for ${endpoint}:`, response.status, data.error);
+                    showMessage(`Error: ${data.error || errorMessage}. Check console for details.`, 'error');
+                    if (errorCallback) errorCallback(new Error(data.error || errorMessage));
+                }
+            } catch (error) {
+                console.error(`Frontend: Network or unexpected error during ${endpoint}:`, error);
+                console.error('Frontend: Full error object:', error);
+                showMessage(`Network error: ${error.message}. Check browser console and backend server.`, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        /**
+         * Downloads the image content from a given canvas.
+         * @param {HTMLCanvasElement} canvas - The canvas element to download.
+         * @param {string} filename - The desired filename for the downloaded image (e.g., 'my_image.png').
+         */
+        function downloadCanvasImage(canvas, filename) {
+            if (!canvas || !canvas.getContext('2d') || canvas.width === 0 || canvas.height === 0) {
+                showMessage('No image available on canvas to download.', 'error');
+                return;
+            }
+
+            // Get the image data from the canvas as a data URL (PNG format is recommended for steganography)
+            const imageDataURL = canvas.toDataURL('image/png');
+
+            // Create a temporary anchor element
+            const a = document.createElement('a');
+            a.href = imageDataURL;
+            a.download = filename; // Set the desired filename
+
+            // Programmatically click the anchor element to trigger the download
+            document.body.appendChild(a); // Append to body to make it clickable in all browsers
+            a.click();
+            document.body.removeChild(a); // Clean up the temporary element
+        }
+
+        /**
+         * Displays malware scan result.
+         * @param {HTMLElement} resultDisplayElement - The div to display results in.
+         * @param {Object} result - The scan result object from backend.
+         */
+        function displayMalwareScanResult(resultDisplayElement, result) {
+            if (!result) {
+                resultDisplayElement.classList.add('hidden');
+                return;
+            }
+
+            let colorClass = 'text-gray-200 bg-gray-700'; // Default
+            let messageHtml = '';
+
+            if (result.status === 'Malicious') {
+                colorClass = 'text-red-200 bg-red-900 border border-red-700';
+                messageHtml = `<p class="font-bold">MALICIOUS!</p><p>${result.detections}</p>`;
+            } else if (result.status === 'Suspicious') {
+                colorClass = 'text-yellow-200 bg-yellow-900 border border-yellow-700';
+                messageHtml = `<p class="font-bold">SUSPICIOUS!</p><p>${result.detections}</p>`;
+            } else if (result.status === 'Harmless') {
+                colorClass = 'text-green-200 bg-green-900 border border-green-700';
+                messageHtml = `<p class="font-bold">Harmless</p><p>${result.detections}</p>`;
+            } else if (result.status === 'Scanning...') {
+                colorClass = 'text-purple-200 bg-purple-900 border border-purple-700';
+                messageHtml = `<p class="font-bold">Scanning...</p><p>${result.message}</p>`;
+            } else if (result.status === 'Error') { // For API key not configured or other backend errors
+                colorClass = 'text-red-200 bg-red-900 border border-red-700';
+                messageHtml = `<p class="font-bold">Scan Error:</p><p>${result.error || result.message}</p>`;
+            } else { // Fallback for unknown status
+                colorClass = 'text-gray-200 bg-gray-700';
+                messageHtml = `<p class="font-bold">Scan Result:</p><p>${result.message || 'Unknown status'}</p>`;
+            }
+
+            // Add VirusTotal analysis link if available
+            if (result.analysis_url) {
+                messageHtml += `<p class="mt-2 text-sm"><a href="${result.analysis_url}" target="_blank" class="text-blue-400 hover:underline">View full analysis on VirusTotal</a></p>`;
+            }
+
+            resultDisplayElement.innerHTML = messageHtml;
+            resultDisplayElement.className = `mt-4 p-3 rounded-lg text-sm ${colorClass}`;
+            resultDisplayElement.classList.remove('hidden');
+            resultDisplayElement.classList.add('block'); // Ensure it's displayed as a block
+        }
+
+        /**
+         * Initiates a malware scan for extracted text or image data.
+         * @param {'text'|'image'} dataType - The type of data to scan.
+         */
+        async function scanExtractedData(dataType) {
+            let extractedData = null;
+            let resultDisplayElement = null;
+
+            // Hide previous scan results for the current data type
+            if (dataType === 'text') {
+                elements.textMalwareScanResult.classList.add('hidden');
+                resultDisplayElement = elements.textMalwareScanResult;
+                extractedData = elements.extractedTextOutput.textContent;
+                if (!extractedData) {
+                    showMessage('No text extracted to scan.', 'error');
+                    return;
+                }
+            } else if (dataType === 'image') {
+                elements.imageMalwareScanResult.classList.add('hidden');
+                resultDisplayElement = elements.imageMalwareScanResult;
+                const canvas = elements.extractedSecretImageCanvas;
+                if (!canvas || canvas.width === 0 || canvas.height === 0) {
+                    showMessage('No image extracted to scan.', 'error');
+                    return;
+                }
+                // Get image from canvas as a Blob, then convert to File-like object for resizeImage
+                const originalExtractedImageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!originalExtractedImageBlob) {
+                    showMessage('Failed to get image data for scanning.', 'error');
+                    return;
+                }
+                const extractedImageFile = new File([originalExtractedImageBlob], 'extracted_image.png', { type: 'image/png' });
+                // Resize for sending to backend as PNG for consistency with stego, max quality
+                extractedData = await resizeImage(extractedImageFile, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, 'image/png', 1.0); 
+            } else {
+                showMessage('Invalid data type for scan.', 'error');
+                return;
+            }
+
+            // Prepare payload for backend
+            const payload = {
+                extractedData: extractedData,
+                dataType: dataType
+            };
+
+            // Call backend API for malware detection
+            await handleApiRequest(
+                '/detect/malware',
+                payload,
+                'Scan initiated successfully.',
+                'Failed to initiate malware scan.',
+                (data) => {
+                    // Success callback: display the scan result
+                    displayMalwareScanResult(resultDisplayElement, data);
+                },
+                (error) => {
+                    // Error callback: display an error message in the scan result area
+                    displayMalwareScanResult(resultDisplayElement, { status: 'Error', error: error.message });
+                }
+            );
+        }
+
+        // --- Event Listeners and Initial Setup ---
+
+        // Tab switching
+        elements.tabs.text.addEventListener('click', () => showTab('textSteganography'));
+        elements.tabs.image.addEventListener('click', () => showTab('imageSteganography'));
+
+        // Image input change listeners
+        elements.textCoverImageInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    // Load original image to display on canvas
+                    await loadImageToCanvas(file, elements.textCoverImageCanvas);
+                    // Clear previous stego output and malware scan results when new cover image is loaded
+                    const ctx = elements.stegoImageOutputCanvas.getContext('2d');
+                    ctx.clearRect(0, 0, elements.stegoImageOutputCanvas.width, elements.stegoImageOutputCanvas.height);
+                    elements.stegoImageOutputCanvas.style.backgroundImage = 'none';
+                    elements.downloadStegoTextImageBtn.classList.add('hidden');
+                    elements.extractedTextDisplay.classList.add('hidden');
+                    elements.extractedTextOutput.textContent = '';
+                    elements.scanExtractedTextBtn.classList.add('hidden');
+                    elements.textMalwareScanResult.classList.add('hidden');
+                } catch (error) {
+                    showMessage('Error loading cover image.', 'error');
+                }
+            }
+        });
+
+        elements.imageCoverImageInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    // Load original image to display on canvas
+                    await loadImageToCanvas(file, elements.imageCoverImageCanvas);
+                    // Clear previous outputs and malware scan results
+                    elements.stegoImageEmbeddingOutputCanvas.getContext('2d').clearRect(0,0,elements.stegoImageEmbeddingOutputCanvas.width, elements.stegoImageEmbeddingOutputCanvas.height);
+                    elements.stegoImageEmbeddingOutputCanvas.style.backgroundImage = 'none';
+                    elements.secretImageCanvas.getContext('2d').clearRect(0,0,elements.secretImageCanvas.width, elements.secretImageCanvas.height);
+                    elements.secretImageCanvas.style.backgroundImage = 'none';
+                    elements.extractedSecretImageCanvas.getContext('2d').clearRect(0,0,elements.extractedSecretImageCanvas.width, elements.extractedSecretImageCanvas.height);
+                    elements.extractedSecretImageCanvas.style.backgroundImage = 'none';
+                    elements.downloadStegoImageEmbeddingBtn.classList.add('hidden');
+                    elements.downloadExtractedSecretImageBtn.classList.add('hidden');
+                    elements.scanExtractedImageBtn.classList.add('hidden');
+                    elements.imageMalwareScanResult.classList.add('hidden');
+                } catch (error) {
+                    showMessage('Error loading cover image.', 'error');
+                }
+            }
+        });
+
+        elements.secretImageInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    // Resize secret image to a reasonable size to avoid embedding issues, output as PNG
+                    const resizedDataUrl = await resizeImage(file, MAX_SECRET_IMAGE_DIMENSION, MAX_SECRET_IMAGE_DIMENSION, 'image/png', 1.0); 
+                    displayImageOnCanvas(resizedDataUrl, elements.secretImageCanvas);
+                } catch (error) {
+                    showMessage('Error loading secret image.', 'error');
+                }
+            }
+        });
+
+        // --- Steganography Functions (called by buttons) ---
+
+        async function embedText(event) {
+            event.preventDefault();
+            showMessage('', ''); // Clear previous messages
+            elements.downloadStegoTextImageBtn.classList.add('hidden'); // Hide download button
+            elements.scanExtractedTextBtn.classList.add('hidden'); // Hide scan button
+            elements.textMalwareScanResult.classList.add('hidden'); // Hide scan result
+
+            const coverImageFile = elements.textCoverImageInput.files[0];
+            const textToEmbed = elements.textToEmbedInput.value;
+
+            if (!coverImageFile) {
+                showMessage('Please select a cover image.', 'error');
+                return;
+            }
+            if (!textToEmbed) {
+                showMessage('Please enter text to embed.', 'error');
+                return;
+            }
+
+            try {
+                // Load original image to display on canvas
+                await loadImageToCanvas(coverImageFile, elements.textCoverImageCanvas); 
+                // Resize image for sending to backend as PNG to ensure lossless embedding
+                const coverImageB64Resized = await resizeImage(coverImageFile, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, 'image/png', 1.0);
+
+                await handleApiRequest(
+                    '/text/embed',
+                    { coverImage: coverImageB64Resized, textToEmbed: textToEmbed }, // Send resized image
+                    'Text embedded successfully!',
+                    'Failed to embed text.',
+                    (data) => {
+                        displayImageOnCanvas(data.stegoImage, elements.stegoImageOutputCanvas);
+                        elements.downloadStegoTextImageBtn.classList.remove('hidden'); // Show download button
+                    }
+                );
+            } catch (error) {
+                showMessage(`Error during text embedding: ${error.message}`, 'error');
+            }
+        }
+
+        async function extractText(event) {
+            event.preventDefault();
+            showMessage('', ''); // Clear previous messages
+            elements.extractedTextDisplay.classList.add('hidden'); // Hide extracted text display
+            elements.extractedTextOutput.textContent = ''; // Clear extracted text
+            elements.scanExtractedTextBtn.classList.add('hidden'); // Hide scan button
+            elements.textMalwareScanResult.classList.add('hidden'); // Hide scan result
+
+            const stegoImageFile = elements.textCoverImageInput.files[0]; // Assuming stego image is loaded into cover image input for extraction
+            if (!stegoImageFile) {
+                showMessage('Please select a stego image to extract text from.', 'error');
+                return;
+            }
+
+            try {
+                const stegoImageB64 = await loadImageToCanvas(stegoImageFile, elements.stegoImageOutputCanvas); // Display on output canvas and get base64
+
+                await handleApiRequest(
+                    '/text/extract',
+                    { stegoImage: stegoImageB64 },
+                    'Text extracted successfully!',
+                    'Failed to extract text.',
+                    (data) => {
+                        elements.extractedTextOutput.textContent = data.extractedText;
+                        elements.extractedTextDisplay.classList.remove('hidden'); // Show extracted text display
+                        if (data.extractedText) { // Only show scan button if text was actually extracted
+                            elements.scanExtractedTextBtn.classList.remove('hidden');
+                        }
+                    }
+                );
+            } catch (error) {
+                showMessage(`Error during text extraction: ${error.message}`, 'error');
+            }
+        }
+
+        async function embedImage(event) {
+            event.preventDefault();
+            showMessage('', ''); // Clear previous messages
+            elements.downloadStegoImageEmbeddingBtn.classList.add('hidden'); // Hide download button
+            elements.scanExtractedImageBtn.classList.add('hidden'); // Hide scan button
+            elements.imageMalwareScanResult.classList.add('hidden'); // Hide scan result
+
+            const coverImageFile = elements.imageCoverImageInput.files[0];
+            const secretImageFile = elements.secretImageInput.files[0];
+
+            if (!coverImageFile) {
+                showMessage('Please select a cover image.', 'error');
+                return;
+            }
+            if (!secretImageFile) {
+                showMessage('Please select a secret image to embed.', 'error');
+                return;
+            }
+
+            try {
+                // Load original cover image to display on canvas
+                await loadImageToCanvas(coverImageFile, elements.imageCoverImageCanvas);
+                // Resize cover image for sending to backend as PNG to ensure lossless embedding
+                const coverImageB64Resized = await resizeImage(coverImageFile, MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, 'image/png', 1.0);
+                
+                // Secret image is already resized and converted to PNG by its input change listener
+                const secretImageB64 = elements.secretImageCanvas.toDataURL('image/png'); // Get as PNG from canvas for embedding logic
+
+                await handleApiRequest(
+                    '/image/embed',
+                    { coverImage: coverImageB64Resized, secretImage: secretImageB64 }, // Send resized cover image
+                    'Image embedded successfully!',
+                    'Failed to embed image.',
+                    (data) => {
+                        displayImageOnCanvas(data.stegoImage, elements.stegoImageEmbeddingOutputCanvas);
+                        elements.downloadStegoImageEmbeddingBtn.classList.remove('hidden'); // Show download button
+                    }
+                );
+            } catch (error) {
+                showMessage(`Error during image embedding: ${error.message}`, 'error');
+            }
+        }
+
+        async function extractImage(event) {
+            event.preventDefault();
+            showMessage('', ''); // Clear previous messages
+            elements.downloadExtractedSecretImageBtn.classList.add('hidden'); // Hide download button
+            elements.scanExtractedImageBtn.classList.add('hidden'); // Hide scan button
+            elements.imageMalwareScanResult.classList.add('hidden'); // Hide scan result
+
+            const stegoImageFile = elements.imageCoverImageInput.files[0]; // Assuming stego image is loaded into cover image input for extraction
+            if (!stegoImageFile) {
+                showMessage('Please select a stego image to extract the secret image from.', 'error');
+                return;
+            }
+
+            try {
+                const stegoImageB64 = await loadImageToCanvas(stegoImageFile, elements.stegoImageEmbeddingOutputCanvas); // Display on output canvas and get base64
+
+                await handleApiRequest(
+                    '/image/extract',
+                    { stegoImage: stegoImageB64 },
+                    'Image extracted successfully!',
+                    'Failed to extract image.',
+                    (data) => {
+                        displayImageOnCanvas(data.extractedImage, elements.extractedSecretImageCanvas);
+                        elements.downloadExtractedSecretImageBtn.classList.remove('hidden'); // Show download button
+                        if (data.extractedImage) { // Only show scan button if an image was actually extracted
+                            elements.scanExtractedImageBtn.classList.remove('hidden');
+                        }
+                    }
+                );
+            } catch (error) {
+                showMessage(`Error during image extraction: ${error.message}`, 'error');
+            }
+        }
+
+        // Initial tab display
+        showTab('textSteganography');
+    </script>
+</body>
+</html>
